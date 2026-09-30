@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小账本 · Finance Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ====== 动态背景 ====== -->
+<div class="bg-aurora">
+    <div class="aurora-blob blob-1"></div>
+    <div class="aurora-blob blob-2"></div>
+    <div class="aurora-blob blob-3"></div>
+    <div class="aurora-blob blob-4"></div>
+</div>
+<div class="bg-noise"></div>
+
+<!-- ====== 主布局 ====== -->
+<div class="app-layout">
+
+    <!-- ─── 侧边栏 ─── -->
+    <aside class="sidebar glass-panel">
+        <div class="brand">
+            <span class="brand-icon">◌</span>
+            <div>
+                <h1 class="brand-title">小账本</h1>
+                <p class="brand-sub">把每一笔小快乐都记下来</p>
+            </div>
+        </div>
+
+        <nav class="nav-group">
+            <span class="nav-label">你的空间</span>
+            <button class="nav-btn active" data-page="home">
+                <span class="nav-icon">⌂</span> 首页
+            </button>
+            <button class="nav-btn" data-page="daily">
+                <span class="nav-icon">◷</span> 每日明细
+            </button>
+            <button class="nav-btn" data-page="location">
+                <span class="nav-icon">⌖</span> 旅行地点
+            </button>
+            <button class="nav-btn" data-page="summary">
+                <span class="nav-icon">◔</span> 消费分析
+            </button>
+            <button class="nav-btn" data-page="charts">
+                <span class="nav-icon">⌁</span> 可视化
+            </button>
+        </nav>
+
+        <div class="nav-separator"></div>
+
+        <nav class="nav-group">
+            <button class="nav-btn nav-btn-secondary" id="btnExport">
+                <span class="nav-icon">⇩</span> 导出 CSV
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span>v3.0 · Web UI · 本地 CSV</span>
+        </div>
+    </aside>
+
+    <!-- ─── 主内容区 ─── -->
+    <main class="main-content">
+
+        <!-- 顶部栏 -->
+        <header class="topbar">
+            <div class="topbar-date" id="topbarDate"></div>
+        </header>
+
+        <!-- ========== 首页 ========== -->
+        <section class="page page-home active" id="pageHome">
+            <div class="page-header">
+                <h2>今天也要好好生活 ✦</h2>
+                <p>收入、支出、旅行和每一个小目标，都放在这里。</p>
+            </div>
+
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card glass-card">
+                    <div class="stat-accent accent-purple"></div>
+                    <div class="stat-body">
+                        <span class="stat-label">当前结余</span>
+                        <span class="stat-value" id="statBalance">¥0.00</span>
+                        <span class="stat-sub">收入 − 支出</span>
+                    </div>
+                </div>
+                <div class="stat-card glass-card">
+                    <div class="stat-accent accent-red"></div>
+                    <div class="stat-body">
+                        <span class="stat-label">累计支出</span>
+                        <span class="stat-value" id="statExpense">¥0.00</span>
+                        <span class="stat-sub">所有已记录支出</span>
+                    </div>
+                </div>
+                <div class="stat-card glass-card">
+                    <div class="stat-accent accent-green"></div>
+                    <div class="stat-body">
+                        <span class="stat-label">累计收入</span>
+                        <span class="stat-value" id="statIncome">¥0.00</span>
+                        <span class="stat-sub">所有已记录收入</span>
+                    </div>
+                </div>
+                <div class="stat-card glass-card">
+                    <div class="stat-accent accent-orange"></div>
+                    <div class="stat-body">
+                        <span class="stat-label">本月支出</span>
+                        <span class="stat-value" id="statMonth">¥0.00</span>
+                        <span class="stat-sub" id="statMonthLabel"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 记账表单 + 最近记录 -->
+            <div class="home-grid">
+                <!-- 记账表单 -->
+                <div class="glass-card form-card">
+                    <div class="card-header">
+                        <h3>记一笔</h3>
+                        <p>轻轻记下这笔消费，不需要复杂操作。</p>
+                    </div>
+
+                    <!-- 类型切换 -->
+                    <div class="segmented-control" id="typeSegment">
+                        <button class="seg-btn active" data-value="Expense">支出</button>
+                        <button class="seg-btn" data-value="Income">收入</button>
+                        <div class="seg-slider"></div>
+                    </div>
+
+                    <!-- 金额 -->
+                    <div class="form-field amount-field">
+                        <label>金额</label>
+                        <div class="amount-input-row">
+                            <span class="amount-prefix">¥</span>
+                            <input type="number" id="inputAmount" placeholder="0.00" step="0.01" min="0.01" autofocus>
+                        </div>
+                    </div>
+
+                    <!-- 分类 -->
+                    <div class="form-field">
+                        <label>分类</label>
+                        <select id="inputCategory"></select>
+                    </div>
+
+                    <!-- 地点 -->
+                    <div class="form-field">
+                        <label>地点</label>
+                        <input type="text" id="inputLocation" placeholder="输入或选择地点" list="locationList">
+                        <datalist id="locationList"></datalist>
+                    </div>
+
+                    <!-- 分摊方式 -->
+                    <div class="form-field">
+                        <label>分摊方式</label>
+                        <div class="segmented-control small" id="splitSegment">
+                            <button class="seg-btn active" data-value="single">🙋 单人</button>
+                            <button class="seg-btn" data-value="aa">👭 AA 分摊</button>
+                            <div class="seg-slider"></div>
+                        </div>
+                    </div>
+
+                    <!-- 参与人数 -->
+                    <div class="form-field" id="participantsField" style="display:none">
+                        <label>参与人数</label>
+                        <input type="number" id="inputParticipants" value="2" min="2" max="20">
+                    </div>
+
+                    <!-- 备注 -->
+                    <div class="form-field">
+                        <label>备注</label>
+                        <input type="text" id="inputDesc" placeholder="比如：和室友吃火锅">
+                    </div>
+
+                    <!-- 提交按钮 -->
+                    <button class="btn-primary btn-glow" id="btnAdd">
+                        <span>＋</span> 保存这笔记录
+                    </button>
+                </div>
+
+                <!-- 最近记录 -->
+                <div class="glass-card recent-card">
+                    <div class="card-header">
+                        <h3>最近记录</h3>
+                        <button class="btn-link" id="btnViewAll">查看全部 ›</button>
+                    </div>
+                    <div class="recent-list" id="recentList">
+                        <div class="empty-state">
+                            <span class="empty-icon">🌷</span>
+                            <p class="empty-title">还没有记录呀</p>
+                            <p class="empty-sub">从左边记下今天的第一笔花费吧</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== 每日明细 ========== -->
+        <section class="page page-daily" id="pageDaily">
+            <div class="page-header">
+                <h2>每日明细</h2>
+                <p>按日期查看当天的所有记录</p>
+            </div>
+
+            <div class="glass-card control-bar">
+                <label>日期</label>
+                <input type="date" id="dailyDate">
+                <button class="btn-primary btn-sm" id="btnDailyQuery">查询</button>
+                <div class="control-total" id="dailyTotal"></div>
+            </div>
+
+            <div class="detail-list" id="dailyList"></div>
+        </section>
+
+        <!-- ========== 旅行地点 ========== -->
+        <section class="page page-location" id="pageLocation">
+            <div class="page-header">
+                <h2>旅行地点</h2>
+                <p>把旅途中的每一笔花费集中起来</p>
+            </div>
+
+            <div class="glass-card control-bar">
+                <label>地点</label>
+                <select id="locationSelect"></select>
+                <button class="btn-primary btn-sm" id="btnLocationQuery">查询</button>
+                <div class="control-total" id="locationTotal"></div>
+            </div>
+
+            <div class="detail-list" id="locationList2"></div>
+        </section>
+
+        <!-- ========== 消费分析 ========== -->
+        <section class="page page-summary" id="pageSummary">
+            <div class="page-header">
+                <h2>消费分析</h2>
+                <p>换一个角度看看钱都去了哪里</p>
+            </div>
+
+            <div class="glass-card control-bar">
+                <div class="segmented-control small" id="summarySegment">
+                    <button class="seg-btn active" data-value="category">按类别</button>
+                    <button class="seg-btn" data-value="day">按天</button>
+                    <button class="seg-btn" data-value="location">按地点</button>
+                    <div class="seg-slider"></div>
+                </div>
+                <div class="control-total" id="summaryTotal"></div>
+            </div>
+
+            <div class="summary-grid" id="summaryGrid"></div>
+        </section>
+
+        <!-- ========== 可视化 ========== -->
+        <section class="page page-charts" id="pageCharts">
+            <div class="page-header">
+                <h2>你的消费画像</h2>
+                <p>看看最近的钱都流向了哪里</p>
+            </div>
+
+            <div class="charts-grid">
+                <div class="glass-card chart-card">
+                    <h3>支出类别分布</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chartCategory"></canvas>
+                    </div>
+                </div>
+                <div class="glass-card chart-card">
+                    <h3>收入 vs 支出</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chartIncomeExpense"></canvas>
+                    </div>
+                </div>
+                <div class="glass-card chart-card chart-wide">
+                    <h3>每日支出趋势</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="chartTrend"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- ====== Toast 通知 ====== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ====== 全部记录弹窗 ====== -->
+<div class="modal-overlay" id="modalAllRecords">
+    <div class="modal glass-card">
+        <div class="card-header">
+            <h3>全部记录</h3>
+            <button class="btn-close" id="btnCloseModal">✕</button>
+        </div>
+        <div class="modal-list" id="allRecordsList"></div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

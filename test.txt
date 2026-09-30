@@ -1,3 +1,0 @@
-这是一个test文本文档，用于测试其他用户是否能够对本项目进行成功PR
-
-This is a test text document used to test whether other users can successfully PR this project

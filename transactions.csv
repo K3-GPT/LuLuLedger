@@ -1,0 +1,7 @@
+﻿date,type,category,amount,description,location,split_type,participants
+2026-09-16 19:16,Income,Salary,8000.0,9月工资,公司,single,1
+2026-09-16 19:16,Expense,Food,35.5,和室友吃火锅,海底捞,single,1
+2026-09-16 19:16,Expense,Transportation,6.0,地铁通勤,北京,single,1
+2026-09-16 19:16,Expense,Shopping,299.0,买了一件外套,优衣库,single,1
+2026-09-16 19:16,Expense,Entertainment,45.0,电影票,万达影城,single,1
+2026-09-16 19:16,Income,Freelance,1500.0,接了个小项目,,single,1

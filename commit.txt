@@ -1,0 +1,10 @@
+feat: 小账本 Web 版初始提交（Flask 后端 + 液态玻璃 UI）
+
+  - 将原 Tkinter 桌面记账程序迁移为 Flask Web 应用，新增入口 app.py
+  - 实现 CSV 数据存储（transactions.csv）与读写函数，字段覆盖日期、类型、分类、
+    金额、备注、地点、分摊方式、参与人数
+  - 提供交易增删查、统计、汇总（按类别/天/地点）、地点与分类列表、CSV 导出共 8 个 API
+  - 新增前端 templates/index.html 与 static/js/app.js、static/css/style.css，
+    实现首页、每日明细、旅行地点、消费分析、可视化五个页面与液态玻璃视觉风格
+  - 支持支出/收入记账、备注、地点、单人/AA 分摊；提供全部记录弹窗与消息提示
+  - 新增 requirements.txt（flask>=3.0）与功能截图 3 张
