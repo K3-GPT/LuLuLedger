@@ -53,13 +53,19 @@
         <div class="nav-separator"></div>
 
         <nav class="nav-group">
+            <button class="nav-btn nav-btn-secondary" id="btnManageCategories">
+                <span class="nav-icon">⚙</span> 管理分类
+            </button>
+            <button class="nav-btn nav-btn-secondary" id="btnManageLocations">
+                <span class="nav-icon">📍</span> 管理地点
+            </button>
             <button class="nav-btn nav-btn-secondary" id="btnExport">
                 <span class="nav-icon">⇩</span> 导出 CSV
             </button>
         </nav>
 
         <div class="sidebar-footer">
-            <span>v3.0 · Web UI · 本地 CSV</span>
+            <span>v3.1 · Web UI · 本地 CSV</span>
         </div>
     </aside>
 
@@ -78,9 +84,9 @@
                 <p>收入、支出、旅行和每一个小目标，都放在这里。</p>
             </div>
 
-            <!-- 统计卡片 -->
+            <!-- 统计卡片（可点击） -->
             <div class="stats-grid">
-                <div class="stat-card glass-card">
+                <div class="stat-card glass-card stat-clickable" data-filter="balance">
                     <div class="stat-accent accent-purple"></div>
                     <div class="stat-body">
                         <span class="stat-label">当前结余</span>
@@ -88,28 +94,28 @@
                         <span class="stat-sub">收入 − 支出</span>
                     </div>
                 </div>
-                <div class="stat-card glass-card">
+                <div class="stat-card glass-card stat-clickable" data-filter="Expense">
                     <div class="stat-accent accent-red"></div>
                     <div class="stat-body">
                         <span class="stat-label">累计支出</span>
                         <span class="stat-value" id="statExpense">¥0.00</span>
-                        <span class="stat-sub">所有已记录支出</span>
+                        <span class="stat-sub">点击查看全部支出 →</span>
                     </div>
                 </div>
-                <div class="stat-card glass-card">
+                <div class="stat-card glass-card stat-clickable" data-filter="Income">
                     <div class="stat-accent accent-green"></div>
                     <div class="stat-body">
                         <span class="stat-label">累计收入</span>
                         <span class="stat-value" id="statIncome">¥0.00</span>
-                        <span class="stat-sub">所有已记录收入</span>
+                        <span class="stat-sub">点击查看全部收入 →</span>
                     </div>
                 </div>
-                <div class="stat-card glass-card">
+                <div class="stat-card glass-card stat-clickable" data-filter="month">
                     <div class="stat-accent accent-orange"></div>
                     <div class="stat-body">
                         <span class="stat-label">本月支出</span>
                         <span class="stat-value" id="statMonth">¥0.00</span>
-                        <span class="stat-sub" id="statMonthLabel"></span>
+                        <span class="stat-sub" id="statMonthLabel">点击查看本月明细 →</span>
                     </div>
                 </div>
             </div>
@@ -143,6 +149,7 @@
                     <div class="form-field">
                         <label>分类</label>
                         <select id="inputCategory"></select>
+                        <input type="text" id="inputCustomCategory" placeholder="输入自定义分类名称" style="display:none;margin-top:6px">
                     </div>
 
                     <!-- 地点 -->
@@ -152,8 +159,8 @@
                         <datalist id="locationList"></datalist>
                     </div>
 
-                    <!-- 分摊方式 -->
-                    <div class="form-field">
+                    <!-- 分摊方式（仅支出显示） -->
+                    <div class="form-field" id="splitField">
                         <label>分摊方式</label>
                         <div class="segmented-control small" id="splitSegment">
                             <button class="seg-btn active" data-value="single">🙋 单人</button>
@@ -172,6 +179,7 @@
                     <div class="form-field">
                         <label>备注</label>
                         <input type="text" id="inputDesc" placeholder="比如：和室友吃火锅">
+                        <span class="auto-detect-hint" id="autoDetectHint"></span>
                     </div>
 
                     <!-- 提交按钮 -->
@@ -197,6 +205,19 @@
             </div>
         </section>
 
+        <!-- ========== 筛选结果页（统计卡片点击进入） ========== -->
+        <section class="page page-filter" id="pageFilter">
+            <div class="page-header">
+                <h2 id="filterTitle">筛选结果</h2>
+                <p id="filterSubtitle"></p>
+            </div>
+            <div class="glass-card control-bar">
+                <button class="btn-back" id="btnBackFilter">← 返回首页</button>
+                <div class="control-total" id="filterTotal"></div>
+            </div>
+            <div class="detail-list" id="filterList"></div>
+        </section>
+
         <!-- ========== 每日明细 ========== -->
         <section class="page page-daily" id="pageDaily">
             <div class="page-header">
@@ -209,6 +230,22 @@
                 <input type="date" id="dailyDate">
                 <button class="btn-primary btn-sm" id="btnDailyQuery">查询</button>
                 <div class="control-total" id="dailyTotal"></div>
+            </div>
+
+            <!-- 日历组件 -->
+            <div class="glass-card calendar-card" id="calendarCard">
+                <div class="calendar-header">
+                    <button class="btn-cal-nav" id="btnCalPrev">‹</button>
+                    <span class="calendar-title" id="calendarTitle"></span>
+                    <button class="btn-cal-nav" id="btnCalNext">›</button>
+                    <button class="btn-today" id="btnCalToday">今天</button>
+                </div>
+                <div class="calendar-grid" id="calendarGrid"></div>
+                <div class="calendar-legend">
+                    <span class="legend-item"><span class="legend-dot legend-green"></span>收入 ≥ 支出</span>
+                    <span class="legend-item"><span class="legend-dot legend-red"></span>支出 > 收入</span>
+                    <span class="legend-item"><span class="legend-dot legend-gray"></span>无记录</span>
+                </div>
             </div>
 
             <div class="detail-list" id="dailyList"></div>
@@ -294,6 +331,53 @@
             <button class="btn-close" id="btnCloseModal">✕</button>
         </div>
         <div class="modal-list" id="allRecordsList"></div>
+    </div>
+</div>
+
+<!-- ====== 分类管理弹窗 ====== -->
+<div class="modal-overlay" id="modalCategories">
+    <div class="modal glass-card modal-wide">
+        <div class="card-header">
+            <h3>⚙ 管理分类</h3>
+            <button class="btn-close" id="btnCloseCatModal">✕</button>
+        </div>
+        <div class="manage-section">
+            <h4>支出分类</h4>
+            <div class="cat-list" id="expenseCatList"></div>
+            <div class="add-cat-row">
+                <input type="text" id="newExpenseCatName" placeholder="分类英文名 (如 Pet)">
+                <input type="text" id="newExpenseCatCN" placeholder="中文名 (如 宠物)">
+                <input type="text" id="newExpenseCatIcon" placeholder="图标" maxlength="4" style="width:60px">
+                <button class="btn-primary btn-sm" id="btnAddExpenseCat">添加</button>
+            </div>
+        </div>
+        <div class="manage-section">
+            <h4>收入分类</h4>
+            <div class="cat-list" id="incomeCatList"></div>
+            <div class="add-cat-row">
+                <input type="text" id="newIncomeCatName" placeholder="分类英文名 (如 Bonus)">
+                <input type="text" id="newIncomeCatCN" placeholder="中文名 (如 奖金)">
+                <input type="text" id="newIncomeCatIcon" placeholder="图标" maxlength="4" style="width:60px">
+                <button class="btn-primary btn-sm" id="btnAddIncomeCat">添加</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====== 地点管理弹窗 ====== -->
+<div class="modal-overlay" id="modalLocations">
+    <div class="modal glass-card">
+        <div class="card-header">
+            <h3>📍 管理地点</h3>
+            <button class="btn-close" id="btnCloseLocModal">✕</button>
+        </div>
+        <div class="manage-section">
+            <div class="cat-list" id="locationManageList"></div>
+            <div class="add-cat-row">
+                <input type="text" id="newLocationName" placeholder="输入新地点名称">
+                <button class="btn-primary btn-sm" id="btnAddLocation">添加</button>
+            </div>
+        </div>
     </div>
 </div>
 
