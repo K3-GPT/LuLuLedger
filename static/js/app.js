@@ -825,6 +825,17 @@ async function deleteLocation(name) {
 
 // ─── 事件绑定 ───
 function bindEvents() {
+    // 鼠标跟随光晕
+    const glow = $('#mouseGlow');
+    document.addEventListener('mousemove', (e) => {
+        glow.style.left = e.clientX + 'px';
+        glow.style.top = e.clientY + 'px';
+        if (!glow.classList.contains('visible')) glow.classList.add('visible');
+    });
+    document.addEventListener('mouseleave', () => {
+        glow.classList.remove('visible');
+    });
+
     // 导航
     $$('.nav-btn[data-page]').forEach(btn => {
         btn.addEventListener('click', () => switchPage(btn.dataset.page));
@@ -872,6 +883,29 @@ function bindEvents() {
 
     // 导出
     $('#btnExport').addEventListener('click', () => { window.location.href = '/api/export'; });
+
+    // 导入 CSV
+    $('#btnImportCSV').addEventListener('click', () => { $('#fileImportCSV').click(); });
+    $('#fileImportCSV').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const res = await fetch('/api/import', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.ok) {
+                toast(`导入成功 · ${data.imported} 条记录已导入${data.skipped > 0 ? `，${data.skipped} 条跳过` : ''} ✨`);
+                await refreshAll();
+                await populateLocationList();
+            } else {
+                toast(data.error || '导入失败', 'error');
+            }
+        } catch (err) {
+            toast('导入失败: 网络错误', 'error');
+        }
+        e.target.value = ''; // 重置 input
+    });
 
     // 查看全部
     $('#btnViewAll').addEventListener('click', async () => {

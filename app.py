@@ -487,6 +487,59 @@ def api_export():
     return send_file(mem, mimetype='text/csv', as_attachment=True, download_name=filename)
 
 
+# ─── API：导入 CSV ──────────────────────────────────────────
+@app.route('/api/import', methods=['POST'])
+def api_import():
+    """导入 CSV 文件（支持原版格式 + 通用格式）"""
+    if 'file' not in request.files:
+        return jsonify({'error': '没有上传文件'}), 400
+
+    file = request.files['file']
+    if not file.filename.endswith('.csv'):
+        return jsonify({'error': '只支持 CSV 文件'}), 400
+
+    try:
+        content = file.read().decode('utf-8-sig')
+        reader = csv.DictReader(io.StringIO(content))
+
+        imported = 0
+        skipped = 0
+        existing = load_transactions()
+
+        for row in reader:
+            try:
+                amount = float(row.get('amount', 0))
+                if amount <= 0:
+                    skipped += 1
+                    continue
+            except (ValueError, TypeError):
+                skipped += 1
+                continue
+
+            tx_type = row.get('type', 'Expense')
+            if tx_type not in ('Expense', 'Income'):
+                tx_type = 'Expense'
+
+            transaction = {
+                'date': row.get('date', datetime.now().strftime('%Y-%m-%d %H:%M')),
+                'type': tx_type,
+                'category': row.get('category', 'Other'),
+                'amount': amount,
+                'description': (row.get('description') or '').strip(),
+                'location': (row.get('location') or '').strip(),
+                'split_type': row.get('split_type', 'single'),
+                'participants': int(row.get('participants', 1) or 1),
+            }
+            existing.append(transaction)
+            imported += 1
+
+        save_transactions(existing)
+        return jsonify({'ok': True, 'imported': imported, 'skipped': skipped})
+
+    except Exception as e:
+        return jsonify({'error': f'导入失败: {str(e)}'}), 400
+
+
 # ─── 启动 ──────────────────────────────────────────────────
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
