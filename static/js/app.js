@@ -13,7 +13,26 @@ const state = {
     calendarYear: new Date().getFullYear(),
     calendarMonth: new Date().getMonth() + 1,
     calendarData: {},
+    currentBg: null,
+    bgOpacity: 0.3,
+    bgBlur: 0,
 };
+
+// ─── 标语库 ───
+const GREETINGS = [
+    '今天也要好好生活 ✦',
+    '每笔记录都是生活的注脚 📝',
+    '理财从记账开始 💰',
+    '把每一笔小快乐都记下来 🌸',
+    '今天花了多少？来看看 🧐',
+    '理性消费，快乐生活 🎯',
+    '记录让生活更有温度 ☀️',
+    '你的财务小管家已上线 🤖',
+    '每一天都值得被认真记录 ✨',
+    '花钱也是一种艺术 🎨',
+    '存钱罐在悄悄变满 🫙',
+    '今天也要元气满满 🌈',
+];
 
 // ─── 工具函数 ───
 const $ = (sel) => document.querySelector(sel);
@@ -39,10 +58,17 @@ async function api(path, options = {}) {
 // ─── 初始化 ───
 document.addEventListener('DOMContentLoaded', async () => {
     initDate();
+    randomGreeting();
     await loadCategories();
+    await loadBgSettings();
     await refreshAll();
     bindEvents();
 });
+
+function randomGreeting() {
+    const el = document.querySelector('.page-home .page-header h2');
+    if (el) el.textContent = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+}
 
 function initDate() {
     const now = new Date();
@@ -823,6 +849,123 @@ async function deleteLocation(name) {
     }
 }
 
+// ─── 背景管理 ───
+async function loadBgSettings() {
+    // 从 localStorage 恢复
+    const saved = localStorage.getItem('financeBg');
+    if (saved) {
+        try {
+            const cfg = JSON.parse(saved);
+            state.currentBg = cfg.filename || null;
+            state.bgOpacity = cfg.opacity ?? 0.3;
+            state.bgBlur = cfg.blur ?? 0;
+        } catch(e) {}
+    }
+    applyBg();
+}
+
+function applyBg() {
+    const el = $('#bgCustom');
+    if (state.currentBg) {
+        el.style.backgroundImage = `url(/api/backgrounds/${state.currentBg})`;
+        el.style.opacity = state.bgOpacity;
+        el.style.filter = `blur(${state.bgBlur}px)`;
+    } else {
+        el.style.backgroundImage = 'none';
+        el.style.opacity = '0';
+    }
+    // 滑块同步
+    const opSlider = $('#bgOpacity');
+    const blSlider = $('#bgBlur');
+    if (opSlider) { opSlider.value = state.bgOpacity * 100; $('#bgOpacityLabel').textContent = Math.round(state.bgOpacity * 100) + '%'; }
+    if (blSlider) { blSlider.value = state.bgBlur; $('#bgBlurLabel').textContent = state.bgBlur + 'px'; }
+}
+
+function saveBgSettings() {
+    localStorage.setItem('financeBg', JSON.stringify({
+        filename: state.currentBg,
+        opacity: state.bgOpacity,
+        blur: state.bgBlur,
+    }));
+}
+
+async function openBgModal() {
+    const files = await api('/backgrounds');
+    renderBgGrid(files);
+    $('#modalBg').classList.add('open');
+}
+
+function renderBgGrid(files) {
+    const grid = $('#bgGrid');
+    if (!files.length) {
+        grid.innerHTML = '<p style="color:var(--muted);font-size:0.82rem;grid-column:1/-1">还没有背景图片，上传一张试试吧 🖼</p>';
+        return;
+    }
+    grid.innerHTML = files.map(f => `
+        <div class="bg-preview-item ${state.currentBg === f ? 'active' : ''}" data-file="${f}">
+            <img src="/api/backgrounds/${f}" alt="bg">
+            <button class="bg-delete-btn" onclick="event.stopPropagation();deleteBg('${f}')" title="删除">✕</button>
+        </div>`).join('');
+    grid.querySelectorAll('.bg-preview-item').forEach(item => {
+        item.addEventListener('click', () => {
+            state.currentBg = item.dataset.file;
+            saveBgSettings();
+            applyBg();
+            renderBgGrid(files);
+        });
+    });
+}
+
+async function uploadBg() {
+    const fileInput = $('#fileBgUpload');
+    fileInput.click();
+}
+
+async function handleBgUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+        const res = await fetch('/api/backgrounds', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.ok) {
+            toast('背景图片已上传 🖼');
+            state.currentBg = data.filename;
+            saveBgSettings();
+            applyBg();
+            openBgModal(); // 刷新列表
+        } else {
+            toast(data.error || '上传失败', 'error');
+        }
+    } catch(err) {
+        toast('上传失败', 'error');
+    }
+    e.target.value = '';
+}
+
+async function deleteBg(filename) {
+    if (!confirm('确定删除这张背景图片吗？')) return;
+    const res = await api(`/backgrounds/${filename}`, { method: 'DELETE' });
+    if (res.ok) {
+        toast('背景图片已删除');
+        if (state.currentBg === filename) {
+            state.currentBg = null;
+            saveBgSettings();
+            applyBg();
+        }
+        openBgModal();
+    }
+}
+
+function clearBg() {
+    state.currentBg = null;
+    saveBgSettings();
+    applyBg();
+    openBgModal();
+    toast('背景已清除');
+}
+
 // ─── 事件绑定 ───
 function bindEvents() {
     // 鼠标跟随光晕
@@ -975,6 +1118,23 @@ function bindEvents() {
         if (e.key === 'Escape') {
             $$('.modal-overlay').forEach(o => o.classList.remove('open'));
         }
+    });
+
+    // 背景管理
+    $('#btnManageBg').addEventListener('click', openBgModal);
+    $('#btnCloseBgModal').addEventListener('click', () => $('#modalBg').classList.remove('open'));
+    $('#btnUploadBg').addEventListener('click', uploadBg);
+    $('#fileBgUpload').addEventListener('change', handleBgUpload);
+    $('#btnClearBg').addEventListener('click', clearBg);
+    $('#bgOpacity').addEventListener('input', (e) => {
+        state.bgOpacity = e.target.value / 100;
+        applyBg();
+        saveBgSettings();
+    });
+    $('#bgBlur').addEventListener('input', (e) => {
+        state.bgBlur = parseInt(e.target.value);
+        applyBg();
+        saveBgSettings();
     });
 
     // 初始化分摊可见性
