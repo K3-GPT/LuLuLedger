@@ -25,7 +25,9 @@ BASE_DIR = os.path.dirname(__file__)
 CSV_FILE = os.path.join(BASE_DIR, 'transactions.csv')
 CUSTOM_FILE = os.path.join(BASE_DIR, 'custom_data.json')
 BG_DIR = os.path.join(BASE_DIR, 'static', 'backgrounds')
+ICON_DIR = os.path.join(BASE_DIR, 'static', 'icons')
 os.makedirs(BG_DIR, exist_ok=True)
+os.makedirs(ICON_DIR, exist_ok=True)
 CSV_FIELDS = ['date', 'type', 'category', 'amount', 'description',
               'location', 'split_type', 'participants']
 
@@ -275,13 +277,17 @@ def api_categories():
 def api_add_category():
     """新增自定义分类"""
     data = request.get_json(force=True)
-    name = (data.get('name') or '').strip()
+    cn_name = (data.get('cn_name') or '').strip()
     cat_type = data.get('type', 'expense')  # expense / income
     icon = data.get('icon', '✨')
-    cn_name = (data.get('cn_name') or name).strip()
 
+    if not cn_name:
+        return jsonify({'error': '分类中文名称不能为空'}), 400
+
+    # 自动生成英文 key
+    name = (data.get('name') or '').strip()
     if not name:
-        return jsonify({'error': '分类名称不能为空'}), 400
+        name = 'cat_' + cn_name
 
     custom = load_custom_data()
     key = f'{cat_type}_categories'
@@ -585,6 +591,49 @@ def api_delete_bg(filename):
 def api_serve_bg(filename):
     """提供背景图片访问"""
     path = os.path.join(BG_DIR, filename)
+    if os.path.exists(path):
+        return send_file(path)
+    return jsonify({'error': '文件不存在'}), 404
+
+
+# ─── API：图标上传 ──────────────────────────────────────────
+ALLOWED_ICON_EXT = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico'}
+
+@app.route('/api/icons', methods=['GET'])
+def api_list_icons():
+    files = []
+    for f in sorted(os.listdir(ICON_DIR)):
+        ext = os.path.splitext(f)[1].lower()
+        if ext in ALLOWED_ICON_EXT:
+            files.append(f)
+    return jsonify(files)
+
+
+@app.route('/api/icons', methods=['POST'])
+def api_upload_icon():
+    if 'file' not in request.files:
+        return jsonify({'error': '没有上传文件'}), 400
+    file = request.files['file']
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_ICON_EXT:
+        return jsonify({'error': '只支持图片文件'}), 400
+    filename = f'icon_{uuid.uuid4().hex[:8]}{ext}'
+    file.save(os.path.join(ICON_DIR, filename))
+    return jsonify({'ok': True, 'filename': filename})
+
+
+@app.route('/api/icons/<filename>', methods=['DELETE'])
+def api_delete_icon(filename):
+    path = os.path.join(ICON_DIR, filename)
+    if os.path.exists(path):
+        os.remove(path)
+        return jsonify({'ok': True})
+    return jsonify({'error': '文件不存在'}), 404
+
+
+@app.route('/api/icons/<filename>')
+def api_serve_icon(filename):
+    path = os.path.join(ICON_DIR, filename)
     if os.path.exists(path):
         return send_file(path)
     return jsonify({'error': '文件不存在'}), 404
