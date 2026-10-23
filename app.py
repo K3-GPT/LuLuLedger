@@ -12,6 +12,7 @@
 import csv
 import os
 import json
+import uuid
 from datetime import datetime
 from collections import defaultdict
 from flask import Flask, render_template, jsonify, request, send_file
@@ -23,6 +24,8 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(__file__)
 CSV_FILE = os.path.join(BASE_DIR, 'transactions.csv')
 CUSTOM_FILE = os.path.join(BASE_DIR, 'custom_data.json')
+BG_DIR = os.path.join(BASE_DIR, 'static', 'backgrounds')
+os.makedirs(BG_DIR, exist_ok=True)
 CSV_FIELDS = ['date', 'type', 'category', 'amount', 'description',
               'location', 'split_type', 'participants']
 
@@ -538,6 +541,53 @@ def api_import():
 
     except Exception as e:
         return jsonify({'error': f'导入失败: {str(e)}'}), 400
+
+
+# ─── API：背景图片管理 ──────────────────────────────────────
+ALLOWED_IMG_EXT = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'}
+
+@app.route('/api/backgrounds', methods=['GET'])
+def api_list_bg():
+    """列出所有背景图片"""
+    files = []
+    for f in sorted(os.listdir(BG_DIR)):
+        ext = os.path.splitext(f)[1].lower()
+        if ext in ALLOWED_IMG_EXT:
+            files.append(f)
+    return jsonify(files)
+
+
+@app.route('/api/backgrounds', methods=['POST'])
+def api_upload_bg():
+    """上传背景图片"""
+    if 'file' not in request.files:
+        return jsonify({'error': '没有上传文件'}), 400
+    file = request.files['file']
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_IMG_EXT:
+        return jsonify({'error': '只支持图片文件 (png/jpg/gif/webp)'}), 400
+    filename = f'bg_{uuid.uuid4().hex[:8]}{ext}'
+    file.save(os.path.join(BG_DIR, filename))
+    return jsonify({'ok': True, 'filename': filename})
+
+
+@app.route('/api/backgrounds/<filename>', methods=['DELETE'])
+def api_delete_bg(filename):
+    """删除背景图片"""
+    path = os.path.join(BG_DIR, filename)
+    if os.path.exists(path):
+        os.remove(path)
+        return jsonify({'ok': True})
+    return jsonify({'error': '文件不存在'}), 404
+
+
+@app.route('/api/backgrounds/<filename>')
+def api_serve_bg(filename):
+    """提供背景图片访问"""
+    path = os.path.join(BG_DIR, filename)
+    if os.path.exists(path):
+        return send_file(path)
+    return jsonify({'error': '文件不存在'}), 404
 
 
 # ─── 启动 ──────────────────────────────────────────────────

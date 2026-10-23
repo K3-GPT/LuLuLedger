@@ -21,6 +21,9 @@
 </div>
 <div class="bg-noise"></div>
 
+<!-- ====== 自定义背景层 ====== -->
+<div class="bg-custom" id="bgCustom"></div>
+
 <!-- ====== 主布局 ====== -->
 <div class="app-layout">
 
@@ -68,6 +71,10 @@
             <input type="file" id="fileImportCSV" accept=".csv" style="display:none">
             <button class="nav-btn nav-btn-secondary" id="btnExport">
                 <span class="nav-icon">⇩</span> 导出 CSV
+            </button>
+            <div class="nav-separator"></div>
+            <button class="nav-btn nav-btn-secondary" id="btnManageBg">
+                <span class="nav-icon">🖼</span> 自定义背景
             </button>
         </nav>
 
@@ -218,8 +225,9 @@
                 <h2 id="filterTitle">筛选结果</h2>
                 <p id="filterSubtitle"></p>
             </div>
-            <div class="glass-card control-bar">
-                <button class="btn-back" id="btnBackFilter">← 返回首页</button>
+            <div class="glass-card control-bar clickable-bar" id="btnBackFilter">
+                <span class="back-arrow">←</span>
+                <span>返回首页</span>
                 <div class="control-total" id="filterTotal"></div>
             </div>
             <div class="detail-list" id="filterList"></div>
@@ -383,6 +391,34 @@
             <div class="add-cat-row">
                 <input type="text" id="newLocationName" placeholder="输入新地点名称">
                 <button class="btn-primary btn-sm" id="btnAddLocation">添加</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====== 背景管理弹窗 ====== -->
+<div class="modal-overlay" id="modalBg">
+    <div class="modal glass-card">
+        <div class="card-header">
+            <h3>🖼 自定义背景</h3>
+            <button class="btn-close" id="btnCloseBgModal">✕</button>
+        </div>
+        <div class="manage-section">
+            <div class="bg-setting-row">
+                <label>背景透明度</label>
+                <input type="range" id="bgOpacity" min="0" max="100" value="30">
+                <span id="bgOpacityLabel">30%</span>
+            </div>
+            <div class="bg-setting-row">
+                <label>模糊强度</label>
+                <input type="range" id="bgBlur" min="0" max="50" value="0">
+                <span id="bgBlurLabel">0px</span>
+            </div>
+            <div class="bg-preview-grid" id="bgGrid"></div>
+            <div class="add-cat-row" style="margin-top:14px">
+                <button class="btn-primary btn-sm" id="btnUploadBg">上传图片</button>
+                <input type="file" id="fileBgUpload" accept="image/*" style="display:none">
+                <button class="btn-sm btn-secondary-action" id="btnClearBg">清除背景</button>
             </div>
         </div>
     </div>
